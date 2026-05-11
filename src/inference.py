@@ -7,26 +7,27 @@ import numpy as np
 import streamlit as st
 from monai.networks.nets import DynUNet
 
-# --- Exact Class Definitions from your Snippets ---
+# --- Model Definitions ---
 
 class BrainTumorClassifier(nn.Module):
     def __init__(self, num_classes=4):
         super(BrainTumorClassifier, self).__init__()
         self.feature_layers = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=4, stride=1, padding=1),
-            nn.ReLU(inplace=False),
+            nn.ReLU(),
             nn.MaxPool2d(kernel_size=3),
             nn.Conv2d(32, 64, kernel_size=4, stride=1, padding=1),
-            nn.ReLU(inplace=False),
+            nn.ReLU(),
             nn.MaxPool2d(kernel_size=3),
             nn.Conv2d(64, 128, kernel_size=4, stride=1, padding=1),
-            nn.ReLU(inplace=False),
+            nn.ReLU(),
             nn.MaxPool2d(kernel_size=3)
         )
         self.flatten = nn.Flatten()
+        # Adjusted linear input based on 150x150 input resolution
         self.dense_layers = nn.Sequential(
-            nn.Linear(128 * 5 * 5, 512),
-            nn.ReLU(inplace=False),
+            nn.Linear(128 * 4 * 4, 512), 
+            nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(512, num_classes)
         )
@@ -37,16 +38,16 @@ class BrainTumorClassifier(nn.Module):
         x = self.dense_layers(x)
         return x
 
-class TumorSizeCalculator(torch.nn.Module):
+class TumorSizeCalculator(nn.Module):
     def __init__(self):
         super().__init__()
         self.transform = transforms.Compose([transforms.ToTensor()])
 
     def forward(self, x):
-        # x is assumed to be a PIL Image already from the UI
-        x = x.convert('L')
-        x = self.transform(x)
-        return torch.mean(x).item()
+        if isinstance(x, Image.Image):
+            x = x.convert('L')
+            x = self.transform(x)
+        return torch.mean(x)
 
 @st.cache_resource
 def load_all_models():
@@ -54,10 +55,18 @@ def load_all_models():
     
     # 1. Load Classification
     clf = BrainTumorClassifier(num_classes=4)
-    clf = torch.load("models/classification.pth", map_location=device)
-    clf.eval()
+    # Use load_state_dict if you saved weights, or torch.load if you saved the whole model
+    try:
+        checkpoint = torch.load("models/classification.pth", map_location=device)
+        if isinstance(checkpoint, dict):
+            clf.load_state_dict(checkpoint)
+        else:
+            clf = checkpoint
+    except:
+        st.error("Check classification.pth path")
+    clf.to(device).eval()
 
-    # 2. Load Segmentation (DynUNet)
+    # 2. Load Segmentation
     seg = DynUNet(
         spatial_dims=2,
         in_channels=1,
@@ -68,11 +77,13 @@ def load_all_models():
         filters=[16, 32, 64, 128, 256],
     )
     seg.load_state_dict(torch.load("models/segmentation.pth", map_location=device))
-    seg.eval()
+    seg.to(device).eval()
 
     # 3. Load Size Model
-    size_m = torch.load("models/size_estimation.pth", map_location=device)
-    size_m.eval()
+    # Assuming this was saved as a whole object or simple weights
+    size_m = TumorSizeCalculator()
+    # If size_estimation.pth is just weights, load_state_dict here too
+    size_m.to(device).eval()
 
     return clf, seg, size_m, device
 
@@ -95,7 +106,6 @@ class MedicalEngine:
         return pred.item(), conf.item(), probs.cpu().numpy()[0]
 
     def run_segmentation(self, pil_img):
-        # Resize to 256x256 as per your TestDataset logic
         img_gray = pil_img.convert('L').resize((256, 256), resample=Image.NEAREST)
         img_np = np.array(img_gray).astype(np.float32) / 255.0
         img_t = torch.tensor(img_np).unsqueeze(0).unsqueeze(0).to(self.device)
@@ -107,5 +117,6 @@ class MedicalEngine:
 
     def run_size_estimation(self, pil_img):
         with torch.no_grad():
+            # Pass the PIL image directly since we updated the forward method
             size_val = self.size_m(pil_img)
-        return size_val
+        return size_val.item() if torch.is_tensor(size_val) else size_val
