@@ -56,14 +56,15 @@ def load_all_models():
     # 1. Load Classification
     clf = BrainTumorClassifier(num_classes=4)
     # Use load_state_dict if you saved weights, or torch.load if you saved the whole model
+    # Change your loading block to this temporarily to see the real error:
     try:
         checkpoint = torch.load("models/brain_tumor_classifier_model.pth", map_location=device)
         if isinstance(checkpoint, dict):
             clf.load_state_dict(checkpoint)
         else:
             clf = checkpoint
-    except:
-        st.error("Check classification.pth path")
+    except Exception as e:
+        st.error(f"Actual Error: {e}") # This will print the specific reason
     clf.to(device).eval()
 
     # 2. Load Segmentation
