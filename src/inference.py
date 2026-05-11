@@ -26,7 +26,7 @@ class BrainTumorClassifier(nn.Module):
         self.flatten = nn.Flatten()
         # Adjusted linear input based on 150x150 input resolution
         self.dense_layers = nn.Sequential(
-            nn.Linear(128 * 4 * 4, 512), 
+            nn.Linear(3200, 512), 
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(512, num_classes)
