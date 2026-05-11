@@ -5,11 +5,23 @@ import plotly.express as px
 from src.inference import MedicalEngine
 from src.auth import validate_session
 
-# --- Security Gate ---
+import streamlit as st
+from src.auth import validate_session
+
+# 1. MUST BE FIRST: Security Check
 if not validate_session():
     st.error("🔒 Access Denied. Please log in from the Home page.")
-    st.stop()
+    st.info("Redirecting to login...")
+    import time
+    time.sleep(2)
+    st.switch_page("App.py")
+    st.stop() # Prevents the rest of the page from loading
+# --- Initialize Inference Engine ---
+@st.cache_resource
+def get_engine():
+    return MedicalEngine()
 
+engine = get_engine()
 # --- Page Config ---
 st.set_page_config(page_title="Classification | NeuroScan AI", layout="wide")
 
