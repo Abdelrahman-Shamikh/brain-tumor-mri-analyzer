@@ -49,39 +49,42 @@ class TumorSizeCalculator(nn.Module):
             x = self.transform(x)
         return torch.mean(x)
 
+import sys
+
 @st.cache_resource
 def load_all_models():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
+    # --- THE TRICK ---
+    # Manually inject the class into the 'main' module namespace 
+    # so torch.load can find it.
+    import __main__
+    __main__.BrainTumorClassifier = BrainTumorClassifier
+    
     # 1. Load Classification
-    # Create the instance FIRST
     clf = BrainTumorClassifier(num_classes=4)
     
     try:
-        # Load the file
+        # Using weights_only=False because the file contains custom class metadata
         checkpoint = torch.load("models/brain_tumor_classifier_model.pth", 
                                 map_location=device, 
                                 weights_only=False)
         
-        # If the file contains the state_dict (weights), load them
+        # Load weights into our local instance
         if isinstance(checkpoint, dict):
-            # If it's a nested dictionary like {'state_dict': ...}, extract it
             state_dict = checkpoint.get('state_dict', checkpoint)
             clf.load_state_dict(state_dict)
         else:
-            # If the file was saved as a whole object, just extract its weights
+            # If it's a full object, pull the state_dict out of it
             clf.load_state_dict(checkpoint.state_dict())
             
     except Exception as e:
         st.error(f"Classification Load Error: {e}")
     
     clf.to(device).eval()
-    
-    # ... rest of your code ...
-    # ... rest of your code
-    clf.to(device).eval()
 
-    # 2. Load Segmentation
+    # 2. Load Segmentation (Add the same safety here)
+    # If DynUNet also throws a 'main' error, do: __main__.DynUNet = DynUNet
     seg = DynUNet(
         spatial_dims=2,
         in_channels=1,
@@ -91,13 +94,13 @@ def load_all_models():
         upsample_kernel_size=[2, 2, 2, 2],
         filters=[16, 32, 64, 128, 256],
     )
-    seg.load_state_dict(torch.load("models/dynunet_unet_model-best.pth", map_location=device,weights_only=False))
+    seg.load_state_dict(torch.load("models/dynunet_unet_model-best.pth", 
+                                   map_location=device, 
+                                   weights_only=False))
     seg.to(device).eval()
 
-    # 3. Load Size Model
-    # Assuming this was saved as a whole object or simple weights
+    # 3. Size Model
     size_m = TumorSizeCalculator()
-    # If size_estimation.pth is just weights, load_state_dict here too
     size_m.to(device).eval()
 
     return clf, seg, size_m, device
