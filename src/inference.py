@@ -53,18 +53,23 @@ class TumorSizeCalculator(nn.Module):
 def load_all_models():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
+    # --- ADD THIS LINE TO ALLOW YOUR CLASS ---
+    torch.serialization.add_safe_globals([BrainTumorClassifier])
+    
     # 1. Load Classification
     clf = BrainTumorClassifier(num_classes=4)
-    # Use load_state_dict if you saved weights, or torch.load if you saved the whole model
-    # Change your loading block to this temporarily to see the real error:
     try:
+        # Now weights_only=True (the default) should work
         checkpoint = torch.load("models/brain_tumor_classifier_model.pth", map_location=device)
         if isinstance(checkpoint, dict):
             clf.load_state_dict(checkpoint)
         else:
             clf = checkpoint
     except Exception as e:
-        st.error(f"Actual Error: {e}") # This will print the specific reason
+        st.error(f"Classification Load Error: {e}")
+    
+    clf.to(device).eval()
+    # ... rest of your code
     clf.to(device).eval()
 
     # 2. Load Segmentation
