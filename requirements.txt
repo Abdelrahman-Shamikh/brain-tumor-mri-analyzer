@@ -1,0 +1,10 @@
+streamlit
+torch
+torchvision
+monai
+plotly
+pandas
+Pillow
+mysql-connector-python
+PyJWT
+passlib[bcrypt]
