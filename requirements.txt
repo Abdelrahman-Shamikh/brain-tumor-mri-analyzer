@@ -7,4 +7,5 @@ pandas
 Pillow
 mysql-connector-python
 PyJWT
+bcrypt==4.0.1
 passlib[bcrypt]
