@@ -12,20 +12,18 @@ logger = logging.getLogger("NeuroScanAI")
 
 def validate_image(uploaded_file):
     """
-    Checks if the uploaded file is a valid, uncorrupted image.
+    Checks if the uploaded file is a valid, uncorrupted image without closing the handle.
     """
     try:
-        img = Image.open(uploaded_file)
-        img.verify()  # Verify it's actually an image
+        # Create a copy so we don't close the original file handle
+        img_copy = Image.open(io.BytesIO(uploaded_file.getvalue()))
+        img_copy.verify() 
         return True
     except Exception as e:
         logger.error(f"Image validation failed for {uploaded_file.name}: {e}")
         return False
 
 def process_image_for_display(uploaded_file):
-    """
-    Safely opens an image for UI preview.
-    """
     try:
         return Image.open(uploaded_file).convert("RGB")
     except Exception as e:
@@ -33,21 +31,13 @@ def process_image_for_display(uploaded_file):
         return None
 
 def medical_header(title, icon="🩺"):
-    """
-    Standardized header used across all medical modules.
-    """
     st.markdown(f"## {icon} {title}")
     st.markdown("---")
 
 def set_page_container_style():
-    """
-    Custom CSS to make the Streamlit UI look more professional and 'medical'.
-    """
     st.markdown("""
         <style>
-        .main {
-            background-color: #F8F9FA;
-        }
+        .main { background-color: #F8F9FA; }
         .stMetric {
             background-color: #FFFFFF;
             padding: 15px;
@@ -58,17 +48,19 @@ def set_page_container_style():
             background-color: #007BFF;
             color: white;
             border-radius: 5px;
+            border: none;
+            padding: 0.5rem 1rem;
         }
-        .stAlert {
-            border-radius: 10px;
+        div.stButton > button:hover {
+            background-color: #0056b3;
+            color: white;
+            border: none;
         }
+        .stAlert { border-radius: 10px; }
         </style>
     """, unsafe_allow_html=True)
 
 def logout_user():
-    """
-    Clears the session and redirects to home.
-    """
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.rerun()
