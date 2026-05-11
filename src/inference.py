@@ -57,7 +57,7 @@ def load_all_models():
     clf = BrainTumorClassifier(num_classes=4)
     # Use load_state_dict if you saved weights, or torch.load if you saved the whole model
     try:
-        checkpoint = torch.load("models/classification.pth", map_location=device)
+        checkpoint = torch.load("models/brain_tumor_classifier_model.pth", map_location=device)
         if isinstance(checkpoint, dict):
             clf.load_state_dict(checkpoint)
         else:
@@ -76,7 +76,7 @@ def load_all_models():
         upsample_kernel_size=[2, 2, 2, 2],
         filters=[16, 32, 64, 128, 256],
     )
-    seg.load_state_dict(torch.load("models/segmentation.pth", map_location=device))
+    seg.load_state_dict(torch.load("models/dynunet_unet_model-best.pth", map_location=device))
     seg.to(device).eval()
 
     # 3. Load Size Model
