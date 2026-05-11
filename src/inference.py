@@ -53,22 +53,31 @@ class TumorSizeCalculator(nn.Module):
 def load_all_models():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    # --- ADD THIS LINE TO ALLOW YOUR CLASS ---
-    torch.serialization.add_safe_globals([BrainTumorClassifier])
-    
     # 1. Load Classification
+    # Create the instance FIRST
     clf = BrainTumorClassifier(num_classes=4)
+    
     try:
-        # Now weights_only=True (the default) should work
-        checkpoint = torch.load("models/brain_tumor_classifier_model.pth", map_location=device,weights_only=False)
+        # Load the file
+        checkpoint = torch.load("models/brain_tumor_classifier_model.pth", 
+                                map_location=device, 
+                                weights_only=False)
+        
+        # If the file contains the state_dict (weights), load them
         if isinstance(checkpoint, dict):
-            clf.load_state_dict(checkpoint)
+            # If it's a nested dictionary like {'state_dict': ...}, extract it
+            state_dict = checkpoint.get('state_dict', checkpoint)
+            clf.load_state_dict(state_dict)
         else:
-            clf = checkpoint
+            # If the file was saved as a whole object, just extract its weights
+            clf.load_state_dict(checkpoint.state_dict())
+            
     except Exception as e:
         st.error(f"Classification Load Error: {e}")
     
     clf.to(device).eval()
+    
+    # ... rest of your code ...
     # ... rest of your code
     clf.to(device).eval()
 
