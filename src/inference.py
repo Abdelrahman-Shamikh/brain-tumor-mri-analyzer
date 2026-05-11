@@ -60,7 +60,7 @@ def load_all_models():
     clf = BrainTumorClassifier(num_classes=4)
     try:
         # Now weights_only=True (the default) should work
-        checkpoint = torch.load("models/brain_tumor_classifier_model.pth", map_location=device)
+        checkpoint = torch.load("models/brain_tumor_classifier_model.pth", map_location=device,weights_only=False)
         if isinstance(checkpoint, dict):
             clf.load_state_dict(checkpoint)
         else:
@@ -82,7 +82,7 @@ def load_all_models():
         upsample_kernel_size=[2, 2, 2, 2],
         filters=[16, 32, 64, 128, 256],
     )
-    seg.load_state_dict(torch.load("models/dynunet_unet_model-best.pth", map_location=device))
+    seg.load_state_dict(torch.load("models/dynunet_unet_model-best.pth", map_location=device,weights_only=False))
     seg.to(device).eval()
 
     # 3. Load Size Model
