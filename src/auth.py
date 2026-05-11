@@ -20,11 +20,19 @@ def create_token(user_id):
     return jwt.encode(payload, conf["jwt_secret"], algorithm=conf["jwt_algorithm"])
 
 def validate_session():
-    if "token" not in st.session_state:
+    # Check if both token and user object exist in the current session
+    if "token" not in st.session_state or "user" not in st.session_state:
         return False
+    
     try:
         conf = st.secrets["auth"]
-        jwt.decode(st.session_state.token, conf["jwt_secret"], algorithms=[conf["jwt_algorithm"]])
+        # Decode the token to check for expiration
+        jwt.decode(
+            st.session_state.token, 
+            conf["jwt_secret"], 
+            algorithms=[conf["jwt_algorithm"]]
+        )
         return True
-    except:
+    except Exception as e:
+        # If token is expired or invalid, clear session
         return False
